@@ -3,8 +3,16 @@ import music21 as m21
 import copy
 
 
+# Add mode to check SDT - ST - DT
 class Chord:
-    def __init__(self, start_note, note1, note2, note3, start, end):
+    def __init__(self, start_note, note1, note2, note3, start, end, ind):
+        self.type = 'N'
+        if ind == 0:
+            self.type = 'T'
+        elif ind == 3:
+            self.type = 'S'
+        elif ind == 4:
+            self.type = 'D'
         self.start_note = start_note
         self.main_note = note1
         self.note1 = start_note + note1
@@ -13,7 +21,16 @@ class Chord:
         self.start = start
         self.end = end
 
-    def change(self, note1, note2, note3):
+    def change(self, note1, note2, note3, ind):
+        self.type = 'N'
+        if ind == 0:
+            self.type = 'T'
+        elif ind == 3:
+            self.type = 'S'
+        elif ind == 4:
+            self.type = 'D'
+        elif ind == 7:
+            self.type = 'SUS'
         self.note1 = self.start_note + note1
         self.note2 = self.start_note + note2
         self.note3 = self.start_note + note3
@@ -48,27 +65,31 @@ class Chord:
             return True
         return False
 
-    def has_dissonance(self, note, tonic, mode):
-        c1 = m21.note.Note(self.note1)
-        c2 = m21.note.Note(self.note2)
-        c3 = m21.note.Note(self.note3)
-        n = m21.note.Note(note)
-        vl = m21.voiceLeading.VoiceLeadingQuartet(c1, c2, c3, n)
-        vl.key = m21.key.Key(tonic=tonic, mode=mode)
-        return not vl.isProperResolution()
+    def has_dissonance(self, note):
+        diss = 0
+        t = max(self.note1%12, note%12) - min(self.note1%12, note%12)
+        if 0 < t <= 2 or t >= 10:
+            diss += 1
+        t = max(self.note2%12, note%12) - min(self.note2%12, note%12)
+        if 0 < t <= 2 or t >= 10:
+            diss += 1
+        t = max(self.note3%12, note%12) - min(self.note3%12, note%12)
+        if 0 < t <= 2 or t >= 10:
+            diss += 1
+        return diss
 
 
 class Chromosome:
     def __init__(self, min_note, ChordGen, gen_len = None, ticks = None, genes = None):
         self.ChordGen = ChordGen
         self.min_note = min_note
-        start_from = min_note - min_note % 12 - 12
+        start_from = min_note - min_note % 12 - 12 - np.random.randint(2)*12
         if genes is None:
             self.genes = []
             for i in range(gen_len):
                 ind, start_ind = np.random.randint(7), np.random.randint(2)
                 note1, note2, note3 = self.ChordGen.get_possible_chord_ind(ind)
-                self.genes.append(Chord(start_from, note1, note2, note3, 2*i*ticks, 2*(i+1)*ticks))
+                self.genes.append(Chord(start_from, note1%12, note2%12, note3%12, 2*i*ticks, 2*(i+1)*ticks, ind))
         else:
             self.genes = genes
 
@@ -76,16 +97,20 @@ class Chromosome:
         new_chromosome = Chromosome(self.min_note, self.ChordGen, genes=copy.deepcopy(self.genes))
         for chord in new_chromosome.genes:
             p = np.random.uniform(0, 1, 1)
-            if p <= 0.4:
+            if p <= 0.1:
+                ind = np.random.randint(7)
+                note1, note2, note3 = self.ChordGen.get_possible_chord_ind(ind)
+                chord.change(note1%12, note2%12, note3%12, ind)
+            elif p <= 0.35:
                 chord.make_inversion_down()
-            elif p <= 0.8:
+            elif p <= 0.6:
                 chord.make_inversion_up()
-            elif p <= 0.9:
+            elif p <= 0.8:
                 note1, note2, note3 = self.ChordGen.get_sus_2(chord.main_note)
-                chord.change(note1, note2, note3)
+                chord.change(note1, note2, note3, 7)
             else:
                 note1, note2, note3 = self.ChordGen.get_sus_4(chord.main_note)
-                chord.change(note1, note2, note3)
+                chord.change(note1, note2, note3, 7)
         # print(self.genes)
         # print(new_chromosome.genes)
         # print('*'*40)
@@ -118,12 +143,14 @@ class GeneticAlgorithm:
         self.min_note = min_note
         self.partition = partition
         self.population = []
+        self.gen_from = 0
 
     def append_population(self, population):
         self.population = self.population + population
 
     def reset_population(self):
         self.population = []
+        self.gen_from = 0
 
     def generate_initial_population(self, c_count):
         for i in range(c_count):
@@ -132,6 +159,7 @@ class GeneticAlgorithm:
             )
 
     def mutation(self, num):
+        # self.calc_fitness()
         mutated = []
         mutate_indexes = np.random.randint(0, len(self.population), num)
         for mutate_index in mutate_indexes:
@@ -139,6 +167,7 @@ class GeneticAlgorithm:
         self.population += mutated
 
     def crossover(self, num):
+        # self.calc_fitness()
         crossover_pop = []
         for i in range(num):
             s = list(np.random.randint(0, len(self.population), 2))
@@ -149,6 +178,7 @@ class GeneticAlgorithm:
         fitness_list = [self.fitness(chromosome.get_genes()) for chromosome in self.population]
         sorted_list = sorted(zip(fitness_list, self.population), key=lambda f: f[0])
         sorted_chromosomes = [pair[1] for pair in sorted_list]
+        self.population = sorted_chromosomes
         return sorted_chromosomes, sorted_list
 
     def run_ga(self, init_population_count, mutation_prob, iterations, pop=None):
@@ -157,12 +187,19 @@ class GeneticAlgorithm:
         self.reset_population()
         self.append_population(pop)
         self.generate_initial_population(init_population_count)
+        to_cross = init_population_count + len(pop)
         for i in range(iterations):
             p = np.random.uniform(0, 1, 1)
-            self.crossover(init_population_count//2)
+            self.crossover(to_cross)
             if p < mutation_prob:
-                num = np.random.randint(init_population_count//2)
+                num = to_cross // 2
                 self.mutation(num)
+
+            # if self.gen_from + 5 < len(self.population):
+            #     self.gen_from = len(self.population) - len(self.population) // (2**(i+1))
+            # if self.gen_from >= len(self.population):
+            #     self.gen_from = len(self.population) - 4
+
         sorted_chromosomes, sl = self.calc_fitness()
         return sorted_chromosomes, sl
 
@@ -171,18 +208,63 @@ class GeneticAlgorithm:
         total = 0
         for note in self.partition:
             while note['start'] >= chords[c_ind].end:
+                # if c_ind + 1 > len(chords):
+                if abs(chords[c_ind].get_min_note() - chords[c_ind+1].get_min_note()) > 5:
+                    total -= 60 * abs(chords[c_ind].get_min_note() - chords[c_ind+1].get_min_note())
+
+                if chords[c_ind].type == 'S' and chords[c_ind+1].type == 'T':
+                    total += 20
+
+                if chords[c_ind].type == 'D' and chords[c_ind+1].type == 'T':
+                    total += 20
+
+                if c_ind + 2 > len(chords):
+                    if chords[c_ind].type == 'S' and chords[c_ind + 1].type == 'D' and chords[c_ind + 2].type == 'T':
+                        total += 40
+
+                s1, s2 = {chords[c_ind].note1, chords[c_ind].note2, chords[c_ind].note3}, {chords[c_ind+1].note1, chords[c_ind+1].note2, chords[c_ind+1].note3}
+                s1.intersection(s2)
+                if len(s1) > 0:
+                    total += 3 * len(s1)
+                else:
+                    total -= 10
+
                 c_ind += 1
 
-            if note['note'] - chords[c_ind].get_max_note() < 12:
-                total -= 100
+                if note['start'] >= chords[c_ind].end and chords[c_ind].type == 'SUS':
+                    total -= 400
 
-            if chords[c_ind].is_note_in_chord(note['note']):
-                total += 10
+            diss = chords[c_ind].has_dissonance(note['note']) > 0
+
+            if note['start'] == chords[c_ind].start:
+                if chords[c_ind].is_note_in_chord(note['note']):
+                    total += 15
+                else:
+                    total -= 20
+
+                if chords[c_ind].type == 'SUS' and diss > 0:
+                    total -= 200
+                elif diss > 0:
+                    total -= 150
             else:
-                total -= 1000
+                if chords[c_ind].is_note_in_chord(note['note']):
+                    total += 5
+                else:
+                    total -= 7
 
-            if chords[c_ind].has_dissonance(note['note'], self.tonic, self.mode):
-                total -= 1000
+                if chords[c_ind].type == 'SUS' and diss > 0:
+                    total -= 135
+                elif diss > 0:
+                    total -= 90
+
+            if chords[c_ind].type == 'SUS' and not chords[c_ind].is_note_in_chord(note['note']):
+                total -= 200
+
+            if note['note'] - chords[c_ind].get_max_note() < 7:
+                total -= 90
+
+            if note['note'] - chords[c_ind].get_max_note() > 16:
+                total -= 140
 
         return total
 
