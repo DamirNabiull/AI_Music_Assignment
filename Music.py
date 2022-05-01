@@ -12,6 +12,7 @@ class MidiGenerator:
         mode = key.mode
         mid = MidiFile(file_name, clip=True)
         tempo = 0
+        velocity = 0
         total_ticks = 0
         min_note = 1000
         notes = []
@@ -24,12 +25,15 @@ class MidiGenerator:
                     min_note = min(min_note, msg.note)
                     total_ticks += msg.time
                     if msg.type == 'note_on':
+                        velocity += msg.velocity
                         notes.append({'start': total_ticks, 'end': 100000, 'note': msg.note})
                     else:
                         for i in range(len(notes) - 1, -1, -1):
                             if notes[i]['note'] == msg.note:
                                 notes[i]['end'] = total_ticks
                                 break
+
+        self.avg_velocity = (velocity // len(notes)) - 10
 
         ticks = mid.ticks_per_beat
         quarters = total_ticks // ticks
@@ -66,12 +70,12 @@ class MidiGenerator:
         half = 2 * self.ticks
 
         for gen in chords:
-            track1.append(Message('note_on', note=gen.note1, velocity=50, time=0))
-            track1.append(Message('note_off', note=gen.note1, velocity=50, time=half))
-            track2.append(Message('note_on', note=gen.note2, velocity=50, time=0))
-            track2.append(Message('note_off', note=gen.note2, velocity=50, time=half))
-            track3.append(Message('note_on', note=gen.note3, velocity=50, time=0))
-            track3.append(Message('note_off', note=gen.note3, velocity=50, time=half))
+            track1.append(Message('note_on', note=gen.note1, velocity=self.avg_velocity, time=0))
+            track1.append(Message('note_off', note=gen.note1, velocity=self.avg_velocity, time=half))
+            track2.append(Message('note_on', note=gen.note2, velocity=self.avg_velocity, time=0))
+            track2.append(Message('note_off', note=gen.note2, velocity=self.avg_velocity, time=half))
+            track3.append(Message('note_on', note=gen.note3, velocity=self.avg_velocity, time=0))
+            track3.append(Message('note_off', note=gen.note3, velocity=self.avg_velocity, time=half))
 
         new_mid.save(f'{track_name}.mid')
 
