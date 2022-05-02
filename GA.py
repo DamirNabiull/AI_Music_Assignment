@@ -209,25 +209,25 @@ class GeneticAlgorithm:
         for note in self.partition:
             while note['start'] >= chords[c_ind].end:
                 # if c_ind + 1 > len(chords):
-                if abs(chords[c_ind].get_min_note() - chords[c_ind+1].get_min_note()) > 5:
-                    total -= 60 * abs(chords[c_ind].get_min_note() - chords[c_ind+1].get_min_note())
+                if abs(chords[c_ind].get_min_note() - chords[c_ind+1].get_min_note()) > 4:
+                    total -= 80 * abs(chords[c_ind].get_min_note() - chords[c_ind+1].get_min_note())
 
                 if chords[c_ind].type == 'S' and chords[c_ind+1].type == 'T':
-                    total += 20
+                    total += 50
 
                 if chords[c_ind].type == 'D' and chords[c_ind+1].type == 'T':
-                    total += 20
+                    total += 50
 
                 if c_ind + 2 > len(chords):
                     if chords[c_ind].type == 'S' and chords[c_ind + 1].type == 'D' and chords[c_ind + 2].type == 'T':
-                        total += 40
+                        total += 100
 
                 s1, s2 = {chords[c_ind].note1, chords[c_ind].note2, chords[c_ind].note3}, {chords[c_ind+1].note1, chords[c_ind+1].note2, chords[c_ind+1].note3}
                 s1.intersection(s2)
                 if len(s1) > 0:
-                    total += 3 * len(s1)
+                    total += 30 * len(s1)
                 else:
-                    total -= 10
+                    total -= 70
 
                 c_ind += 1
 
@@ -238,33 +238,31 @@ class GeneticAlgorithm:
 
             if note['start'] == chords[c_ind].start:
                 if chords[c_ind].is_note_in_chord(note['note']):
-                    total += 15
-                else:
-                    total -= 20
-
-                if chords[c_ind].type == 'SUS' and diss > 0:
-                    total -= 200
+                    total += 100
+                elif chords[c_ind].type == 'SUS' and diss > 0:
+                    total -= 300
                 elif diss > 0:
                     total -= 150
             else:
                 if chords[c_ind].is_note_in_chord(note['note']):
-                    total += 5
-                else:
-                    total -= 7
+                    total += 50
 
                 if chords[c_ind].type == 'SUS' and diss > 0:
-                    total -= 135
+                    total -= 200
                 elif diss > 0:
-                    total -= 90
+                    total -= 100
 
             if chords[c_ind].type == 'SUS' and not chords[c_ind].is_note_in_chord(note['note']):
                 total -= 200
 
+            if note['note'] - chords[c_ind].get_max_note() == 0:
+                total -= 200
+
             if note['note'] - chords[c_ind].get_max_note() < 7:
-                total -= 90
+                total -= 200
 
             if note['note'] - chords[c_ind].get_max_note() > 16:
-                total -= 140
+                total -= 200
 
         return total
 
