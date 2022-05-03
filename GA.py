@@ -2,6 +2,7 @@ import numpy as np
 import copy
 
 
+# class that represents chord
 class Chord:
     def __init__(self, start_note, note1, note2, note3, start, end, ind):
         self.type = 'N'
@@ -19,6 +20,7 @@ class Chord:
         self.start = start
         self.end = end
 
+    # function that changes chord
     def change(self, note1, note2, note3, ind):
         self.type = 'N'
         if ind == 0:
@@ -33,6 +35,7 @@ class Chord:
         self.note2 = self.start_note + note2
         self.note3 = self.start_note + note3
 
+    # function that makes up inversion for chord
     def make_inversion_up(self):
         min_note = self.get_min_note()
         if min_note == self.note1:
@@ -42,6 +45,7 @@ class Chord:
         else:
             self.note3 += 12
 
+    # function that makes down inversion for chord
     def make_inversion_down(self):
         max_note = self.get_max_note()
         if max_note == self.note3:
@@ -51,18 +55,22 @@ class Chord:
         else:
             self.note1 -= 12
 
+    # function that returns max note in chord
     def get_max_note(self):
         return max(self.note1, self.note2, self.note3)
 
+    # function that returns min note in chord
     def get_min_note(self):
         return min(self.note1, self.note2, self.note3)
 
+    # function that returns max note in chord
     def is_note_in_chord(self, note):
         normal_note = note % 12
         if normal_note == self.note1 % 12 or normal_note == self.note2 % 12 or normal_note == self.note3 % 12:
             return True
         return False
 
+    # function that checks if chord has dissonance with note
     def has_dissonance(self, note):
         diss = 0
         t = max(self.note1%12, note%12) - min(self.note1%12, note%12)
@@ -77,6 +85,7 @@ class Chord:
         return diss
 
 
+# class Chromosome for Genetic Algorithm
 class Chromosome:
     def __init__(self, min_note, ChordGen, gen_len = None, ticks = None, genes = None):
         self.ChordGen = ChordGen
@@ -91,6 +100,7 @@ class Chromosome:
         else:
             self.genes = genes
 
+    # function of mutation
     def mutation(self):
         new_chromosome = Chromosome(self.min_note, self.ChordGen, genes=copy.deepcopy(self.genes))
         for chord in new_chromosome.genes:
@@ -111,6 +121,7 @@ class Chromosome:
                 chord.change(note1, note2, note3, 7)
         return new_chromosome
 
+    # function of crossover
     def crossover(self, other):
         middle = len(self.genes) // 2
         g1 = copy.deepcopy(self.genes)
@@ -121,10 +132,12 @@ class Chromosome:
         c2 = Chromosome(self.min_note, self.ChordGen, genes=new_g2)
         return [c1, c2]
 
+    # function that returns genes
     def get_genes(self):
         return self.genes
 
 
+# class of Genetic algorithm
 class GeneticAlgorithm:
     def __init__(self, ChordGen, chords_count, tonic, mode, ticks, min_note, partition):
         self.ChordGen = ChordGen
@@ -136,18 +149,22 @@ class GeneticAlgorithm:
         self.partition = partition
         self.population = []
 
+    # function to add chromosomes to population
     def append_population(self, population):
         self.population = self.population + population
 
+    # function to reset population
     def reset_population(self):
         self.population = []
 
+    # function to generate initial chromosomes in population
     def generate_initial_population(self, c_count):
         for i in range(c_count):
             self.population.append(
                 Chromosome(self.min_note, self.ChordGen, gen_len=self.chords_count, ticks=self.ticks)
             )
 
+    # function to mutate chromosomes in population
     def mutation(self, num):
         mutated = []
         mutate_indexes = np.random.randint(0, len(self.population), num)
@@ -155,6 +172,7 @@ class GeneticAlgorithm:
             mutated = mutated + [self.population[mutate_index].mutation()]
         self.population += mutated
 
+    # function to crossover chromosomes in population
     def crossover(self, num):
         crossover_pop = []
         for i in range(num):
@@ -162,13 +180,14 @@ class GeneticAlgorithm:
             crossover_pop = crossover_pop + self.population[s[0]].crossover(self.population[s[1]])
         self.population += crossover_pop
 
+    # function to get sorted list of chromosomes in population
     def calc_fitness(self):
-        fitness_list = [self.fitness(chromosome.get_genes()) for chromosome in self.population]
-        sorted_list = sorted(zip(fitness_list, self.population), key=lambda f: f[0])
+        fit_list = [self.fitness(chromosome.get_genes()) for chromosome in self.population]
+        sorted_list = sorted(zip(fit_list, self.population), key=lambda f: f[0])
         sorted_chromosomes = [pair[1] for pair in sorted_list]
-        self.population = sorted_chromosomes
         return sorted_chromosomes, sorted_list
 
+    # function to run algorithm via n iterations
     def run_ga(self, init_population_count, mutation_prob, iterations, pop=None):
         if pop is None:
             pop = []
@@ -186,6 +205,7 @@ class GeneticAlgorithm:
         sorted_chromosomes, sl = self.calc_fitness()
         return sorted_chromosomes, sl
 
+    # function that calculate fitness for concrete chords
     def fitness(self, chords):
         c_ind = 0
         total = 0

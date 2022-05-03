@@ -2,7 +2,9 @@ from mido import MidiFile, MidiTrack, Message
 import music21
 
 
+# class to work with midi files
 class MidiGenerator:
+    # __init__ gets all information about midi file
     def __init__(self, file_name):
         self.file_name = file_name
         file = music21.converter.parse(file_name)
@@ -49,9 +51,11 @@ class MidiGenerator:
         self.min_note = min_note
         self.notes_partition = notes
 
+    # function that returns information about initial midi file
     def get_data(self):
         return self.tonic, self.mode, self.quarters, self.ticks, self.tempo, self.min_note, self.notes_partition
 
+    # function that creates output midi
     def create_new_track(self, chords, track_name='new_song'):
         mid = MidiFile(self.file_name, clip=True)
         new_mid = MidiFile(type=1)
