@@ -1,9 +1,7 @@
 import numpy as np
-import music21 as m21
 import copy
 
 
-# Add mode to check SDT - ST - DT
 class Chord:
     def __init__(self, start_note, note1, note2, note3, start, end, ind):
         self.type = 'N'
@@ -111,9 +109,6 @@ class Chromosome:
             else:
                 note1, note2, note3 = self.ChordGen.get_sus_4(chord.main_note)
                 chord.change(note1, note2, note3, 7)
-        # print(self.genes)
-        # print(new_chromosome.genes)
-        # print('*'*40)
         return new_chromosome
 
     def crossover(self, other):
@@ -125,9 +120,6 @@ class Chromosome:
         c1 = Chromosome(self.min_note, self.ChordGen, genes=new_g1)
         c2 = Chromosome(self.min_note, self.ChordGen, genes=new_g2)
         return [c1, c2]
-
-    def set_genes(self, new_g):
-        self.genes = new_g
 
     def get_genes(self):
         return self.genes
@@ -143,14 +135,12 @@ class GeneticAlgorithm:
         self.min_note = min_note
         self.partition = partition
         self.population = []
-        self.gen_from = 0
 
     def append_population(self, population):
         self.population = self.population + population
 
     def reset_population(self):
         self.population = []
-        self.gen_from = 0
 
     def generate_initial_population(self, c_count):
         for i in range(c_count):
@@ -159,7 +149,6 @@ class GeneticAlgorithm:
             )
 
     def mutation(self, num):
-        # self.calc_fitness()
         mutated = []
         mutate_indexes = np.random.randint(0, len(self.population), num)
         for mutate_index in mutate_indexes:
@@ -167,7 +156,6 @@ class GeneticAlgorithm:
         self.population += mutated
 
     def crossover(self, num):
-        # self.calc_fitness()
         crossover_pop = []
         for i in range(num):
             s = list(np.random.randint(0, len(self.population), 2))
@@ -195,11 +183,6 @@ class GeneticAlgorithm:
                 num = to_cross // 2
                 self.mutation(num)
 
-            # if self.gen_from + 5 < len(self.population):
-            #     self.gen_from = len(self.population) - len(self.population) // (2**(i+1))
-            # if self.gen_from >= len(self.population):
-            #     self.gen_from = len(self.population) - 4
-
         sorted_chromosomes, sl = self.calc_fitness()
         return sorted_chromosomes, sl
 
@@ -208,7 +191,6 @@ class GeneticAlgorithm:
         total = 0
         for note in self.partition:
             while note['start'] >= chords[c_ind].end:
-                # if c_ind + 1 > len(chords):
                 if abs(chords[c_ind].get_min_note() - chords[c_ind+1].get_min_note()) > 4:
                     total -= 80 * abs(chords[c_ind].get_min_note() - chords[c_ind+1].get_min_note())
 

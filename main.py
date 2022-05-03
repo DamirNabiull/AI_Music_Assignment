@@ -1,13 +1,9 @@
-from mido import MidiFile, MidiTrack, Message, MetaMessage
-import mido
-import music21
-import random
 import Notes
 import Music
 import GA
 
 
-file = 'input2.mid'
+file = 'input3.mid'
 
 MidiGen = Music.MidiGenerator(file)
 

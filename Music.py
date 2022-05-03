@@ -1,5 +1,4 @@
-from mido import MidiFile, MidiTrack, Message, MetaMessage
-import mido
+from mido import MidiFile, MidiTrack, Message
 import music21
 
 
