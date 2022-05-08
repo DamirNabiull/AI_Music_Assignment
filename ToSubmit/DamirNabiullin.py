@@ -371,11 +371,12 @@ class GeneticAlgorithm:
         self.population += crossover_pop
 
     # function to get sorted list of chromosomes in population
-    def calc_fitness(self):
+    def selection(self, num):
         fit_list = [self.fitness(chromosome.get_genes()) for chromosome in self.population]
         sorted_list = sorted(zip(fit_list, self.population), key=lambda f: f[0])
         sorted_chromosomes = [pair[1] for pair in sorted_list]
-        return sorted_chromosomes, sorted_list
+        sorted_chromosomes = sorted_chromosomes[-num:]
+        return sorted_chromosomes
 
     # function to run algorithm via n iterations
     def run_ga(self, init_population_count, mutation_prob, iterations, pop=None):
@@ -392,8 +393,8 @@ class GeneticAlgorithm:
                 num = to_cross // 2
                 self.mutation(num)
 
-        sorted_chromosomes, sl = self.calc_fitness()
-        return sorted_chromosomes, sl
+        sorted_chromosomes = self.selection(to_cross//2)
+        return sorted_chromosomes
 
     # function that calculate fitness for concrete chords
     def fitness(self, chords):
@@ -461,7 +462,7 @@ class GeneticAlgorithm:
 
 epochs = 25
 iterations = 200
-initial_pop = 10  # >= 1
+initial_pop = 10  # > 1
 mutation_prob = 0.8
 
 if __name__ == '__main__':
@@ -473,15 +474,14 @@ if __name__ == '__main__':
         ChordGen = ChordGenerator(tonic, mode)
         ga = GeneticAlgorithm(ChordGen, MidiGen.chords_count, tonic, mode, ticks, min_note, partition)
         best = []
-        sl = []
         for i in range(epochs):
             print('Epoch:', i)
             sorted_c = []
             if i == 0:
-                sorted_c, sl = ga.run_ga(initial_pop, mutation_prob, iterations, best)
+                sorted_c = ga.run_ga(initial_pop, mutation_prob, iterations, best)
             else:
-                sorted_c, sl = ga.run_ga(initial_pop // 2, mutation_prob, iterations, best)
-            best = sorted_c[-initial_pop // 2:]
+                sorted_c = ga.run_ga(initial_pop // 2, mutation_prob, iterations, best)
+            best = sorted_c[:]
         chords = best[-1].get_genes()
         MidiGen.create_new_track(chords, file[:-4] + '_output')
     else:
